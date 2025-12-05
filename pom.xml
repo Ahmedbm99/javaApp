@@ -152,6 +152,11 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>10.5.0</version>
+            </plugin>
 
             <!-- Surefire Plugin pour les tests -->
             <plugin>
