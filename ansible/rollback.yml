@@ -1,0 +1,20 @@
+---
+- name: Rollback Application
+  hosts: app_servers
+  become: yes
+
+  tasks:
+
+    - name: Read previous image
+      shell: cat /var/lib/my-app/prev_image
+      register: rollback_image
+
+    - name: Stop current container
+      shell: docker stop app || true
+
+    - name: Rollback to previous image
+      shell: >
+        docker run -d
+        --name app
+        -p 8080:8080
+        {{ rollback_image.stdout }}
