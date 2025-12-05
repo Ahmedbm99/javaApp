@@ -1,0 +1,25 @@
+---
+- name: Deploy Application
+  hosts: app_servers
+  become: yes
+  vars:
+    image: ""
+
+  tasks:
+
+    - name: Stop old container
+      shell: docker stop app || true
+
+    - name: Save previous image for rollback
+      shell: docker inspect app --format='{{.Image}}' > /var/lib/my-app/prev_image || true
+
+    - name: Run database migrations
+      shell: >
+        flyway -url=jdbc:postgresql://localhost:5432/appdb
+        -user=admin -password=admin migrate
+
+    - name: Deploy new version
+      shell: >
+        docker run -d --rm
+        --name app
+        -p
