@@ -24,13 +24,13 @@ public class JPAUtil {
     /**
      * Obtient une instance d'EntityManagerFactory
      */
-    public static EntityManagerFactory getEntityManagerFactory() {
-        if (entityManagerFactory == null) {
-            entityManagerFactory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
-        }
-        return entityManagerFactory;
+public static EntityManagerFactory getEntityManagerFactory() {
+    if (entityManagerFactory == null || !entityManagerFactory.isOpen()) {
+        entityManagerFactory = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME);
     }
-    
+    return entityManagerFactory;
+}
+
     /**
      * Obtient une instance d'EntityManager
      */
