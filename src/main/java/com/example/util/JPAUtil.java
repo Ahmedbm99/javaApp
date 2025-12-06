@@ -35,9 +35,10 @@ public class JPAUtil {
      * Exécute les migrations Flyway
      */
 private static void runFlywayMigrations() {
-    try {
-   Properties props = new Properties();
-        props.load(new FileInputStream("src/main/resources/vars/flyway_test.conf"));
+    Properties props = new Properties();
+
+    try (FileInputStream fis = new FileInputStream("src/main/resources/vars/flyway_test.conf")) {
+        props.load(fis);
 
         Flyway flyway = Flyway.configure()
                 .dataSource(
