@@ -23,7 +23,7 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Copy shaded JAR from build stage
-COPY --from=build /app/target/javaApp-repo-1.0-shaded.jar app.jar
+COPY --from=build /app/target/javaApp-repo-1.0.jar app.jar
 
 # Expose port (your app port)
 EXPOSE 8080
