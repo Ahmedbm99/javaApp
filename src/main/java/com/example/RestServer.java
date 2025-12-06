@@ -4,6 +4,7 @@ import com.example.config.RestApplication;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import java.util.logging.Logger;
 
 import java.net.URI;
 
@@ -14,7 +15,8 @@ public class RestServer {
     
     // Base URI pour l'application
     public static final String BASE_URI = "http://localhost:3000/";
-    
+    private static final Logger logger = Logger.getLogger(RestServer.class.getName());
+
     /**
      * Démarre le serveur Grizzly HTTP
      */
@@ -37,17 +39,15 @@ public class RestServer {
    
         startServer();
 
-        System.out.println(String.format(
-            "Application REST démarrée avec succès!%n" +
-            "Point d'accès: %s",
-            BASE_URI + "api"));
+        logger.info("Application REST démarrée avec succès! Point d'accès: " + BASE_URI + "api");
+
 
         // Garde le serveur actif indéfiniment
 try {
     Thread.currentThread().join();
 } catch (InterruptedException e) {
     Thread.currentThread().interrupt();
-    e.printStackTrace();
+            logger.severe("Le serveur a été interrompu: " + e.getMessage());
 }
 }
 
