@@ -6,11 +6,11 @@
   tasks:
 
     - name: Read previous image
-      shell: cat /var/lib/my-app/prev_image
+      shell: cat /var/lib/app/prev_image
       register: rollback_image
 
     - name: Stop current container
-      shell: docker stop app || true
+      shell: docker stop app 
 
     - name: Rollback to previous image
       shell: >
