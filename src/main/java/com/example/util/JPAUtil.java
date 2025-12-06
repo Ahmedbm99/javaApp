@@ -5,6 +5,10 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import org.flywaydb.core.Flyway;
 
+import java.io.FileInputStream;
+import java.util.Properties;
+import java.util.logging.Logger;
+
 /**
  * Classe utilitaire pour gérer l'EntityManagerFactory et l'EntityManager
  */
@@ -12,7 +16,12 @@ public class JPAUtil {
     
     private static final String PERSISTENCE_UNIT_NAME = "example-pu";
     private static EntityManagerFactory entityManagerFactory;
-    
+        private static final Logger logger = Logger.getLogger(JPAUtil.class.getName());
+        
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String password = System.getenv("DB_PASSWORD");
+
     static {
         try {
             // Exécuter les migrations Flyway avant d'initialiser JPA
@@ -28,21 +37,29 @@ public class JPAUtil {
     /**
      * Exécute les migrations Flyway
      */
-    private static void runFlywayMigrations() {
-        try {
-            Flyway flyway = Flyway.configure()
-                    .dataSource("jdbc:postgresql://192.168.220.8:5432/appdb", "admin", "admin")
-                    .locations("filesystem:src/main/resources/db/migration")
-                    .load();
-            flyway.migrate();
-            System.out.println("Migrations Flyway exécutées avec succès");
-        } catch (Exception e) {
-            System.err.println("Erreur lors de l'exécution des migrations Flyway: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Échec des migrations Flyway", e);
-        }
+private static void runFlywayMigrations() {
+    try {
+   Properties props = new Properties();
+        props.load(new FileInputStream("src/main/resources/vars/flyway.conf"));
+
+        Flyway flyway = Flyway.configure()
+                .dataSource(
+                    props.getProperty("flyway.url"),
+                    props.getProperty("flyway.user"),
+                    props.getProperty("flyway.password")
+                )
+                .locations(props.getProperty("flyway.locations"))
+                .baselineOnMigrate(Boolean.parseBoolean(props.getProperty("flyway.baselineOnMigrate", "true")))
+                .load();
+
+        flyway.migrate();
+        logger.info("Migrations Flyway exécutées avec succès");
+    } catch (Exception e) {
+        logger.severe("Échec des migrations Flyway: " + e.getMessage());
+        throw new RuntimeException("Échec des migrations Flyway", e);
     }
-    
+}
+
     /**
      * Obtient une instance d'EntityManagerFactory
      */
