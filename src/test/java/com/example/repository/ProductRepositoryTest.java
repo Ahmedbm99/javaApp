@@ -23,6 +23,7 @@ class ProductRepositoryTest {
     
     @BeforeAll
     static void setUp() {
+        JPAUtil.init("example-pu-test", "src/main/resources/vars/flyway_test.conf");
         productRepository = new ProductRepository();
     }
     
