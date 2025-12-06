@@ -14,7 +14,7 @@ import java.util.logging.Logger;
  */
 public class JPAUtil {
     
-    private static final String PERSISTENCE_UNIT_NAME = "example-pu";
+    private static final String PERSISTENCE_UNIT_NAME = "example-pu-test";
     private static EntityManagerFactory entityManagerFactory;
         private static final Logger logger = Logger.getLogger(JPAUtil.class.getName());
         
