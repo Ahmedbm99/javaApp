@@ -2,7 +2,7 @@
 
 sleep 5
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/actuator/health)
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/actuator/health)
 
 if [ "$STATUS" == "200" ]; then
   echo "Health OK"

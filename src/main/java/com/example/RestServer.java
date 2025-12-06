@@ -13,7 +13,7 @@ import java.net.URI;
 public class RestServer {
     
     // Base URI pour l'application
-    public static final String BASE_URI = "http://localhost:5000/";
+    public static final String BASE_URI = "http://localhost:3000/";
     
     /**
      * Démarre le serveur Grizzly HTTP
@@ -34,7 +34,7 @@ public class RestServer {
      * Méthode principale pour démarrer le serveur
      */
    public static void main(String[] args) {
-    try {
+   
         final HttpServer server = startServer();
 
         System.out.println(String.format(
@@ -43,12 +43,11 @@ public class RestServer {
             BASE_URI + "api"));
 
         // Garde le serveur actif indéfiniment
-        Thread.currentThread().join();
-
-    } catch (InterruptedException e) {
-        System.err.println("Le serveur a été interrompu: " + e.getMessage());
-        e.printStackTrace();
-    } 
+try {
+    Thread.currentThread().join();
+} catch (InterruptedException e) {
+    e.printStackTrace();
+}
 }
 
 }
