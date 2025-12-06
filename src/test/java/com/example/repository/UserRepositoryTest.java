@@ -24,7 +24,16 @@ class UserRepositoryTest {
     static void setUp() {
         userRepository = new UserRepository();
     }
-    
+    @BeforeEach
+public void cleanDatabase() {
+    EntityManager em = JPAUtil.getEntityManager();
+    em.getTransaction().begin();
+    em.createQuery("DELETE FROM User").executeUpdate();
+    em.createQuery("DELETE FROM Product").executeUpdate(); // si tu as des produits aussi
+    em.getTransaction().commit();
+    em.close();
+}
+
     @AfterAll
     static void tearDown() {
         JPAUtil.closeEntityManagerFactory();
