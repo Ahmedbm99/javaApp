@@ -1,15 +1,13 @@
-- hosts: localhost
-  tasks:
-    - name: Start the Vagrant VM
-      shell: cd vagrant && vagrant up
-      args:
-        chdir: "{{ playbook_dir }}"
-
-- hosts: app_servers
+- hosts: server
   become: yes
+  vars:
+    registry_url: "192.168.220.8:5000"
+    registry_username: "{{ registry_username }}"
+    registry_password: "{{ registry_password }}"
+    image: "{{ image }}"
   tasks:
-    - name: Login to registry
-      shell: echo "{{ registry_password }}" | docker login 192.168.220.8:5000 -u "{{ registry_username }}" --password-stdin
+    - name: Login to Docker registry
+      shell: echo "{{ registry_password }}" | docker login {{ registry_url }} -u "{{ registry_username }}" --password-stdin
 
     - name: Pull docker image
       shell: docker pull "{{ image }}"
