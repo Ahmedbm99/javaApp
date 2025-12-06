@@ -1,32 +1,32 @@
-# Stage 1: Build avec Maven
+# Stage 1: Build with Maven
 FROM maven:3.9-eclipse-temurin-17 AS build
 
-# Définir le répertoire de travail
+# Set working directory
 WORKDIR /app
 
-# Copier le fichier pom.xml (pour bénéficier du cache Docker)
+# Copy pom.xml first to leverage Docker cache
 COPY pom.xml .
 
-# Télécharger les dépendances (mise en cache si pom.xml n'a pas changé)
+# Download dependencies (offline mode)
 RUN mvn dependency:go-offline -B
 
-# Copier le code source
+# Copy source code
 COPY src ./src
 
-# Construire le projet (skip tests pour accélérer le build)
-RUN mvn clean package -DskipTests
+# Build project and create shaded JAR
+RUN mvn clean package -DskipTests -B
 
-# Stage 2: Runtime avec JRE seulement
+# Stage 2: Runtime with JRE only
 FROM eclipse-temurin:17-jre-alpine
 
-# Définir le répertoire de travail
+# Set working directory
 WORKDIR /app
 
-# Copier le JAR depuis le stage de build
+# Copy shaded JAR from build stage
 COPY --from=build /app/target/javaApp-repo-1.0-shaded.jar app.jar
 
-# Exposer un port si nécessaire (optionnel)
-# EXPOSE 5000
+# Expose port (your app port)
+EXPOSE 8080
 
-# Commande pour exécuter l'application
+# Command to run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
