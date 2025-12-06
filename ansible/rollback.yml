@@ -16,5 +16,5 @@
       shell: >
         docker run -d
         --name app
-        -p 8080:8080
+        -p 3000:3000
         {{ rollback_image.stdout }}

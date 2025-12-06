@@ -14,7 +14,7 @@ import java.net.URI;
 public class RestServer {
     
     // Base URI pour l'application
-    public static final String BASE_URI = "http://localhost:3000/";
+    public static final String BASE_URI = "http://0.0.0.0:3000/";
     private static final Logger logger = Logger.getLogger(RestServer.class.getName());
 
     /**
