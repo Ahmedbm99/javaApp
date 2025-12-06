@@ -48,10 +48,7 @@ public class RestServer {
     } catch (InterruptedException e) {
         System.err.println("Le serveur a été interrompu: " + e.getMessage());
         e.printStackTrace();
-    } catch (Exception e) {
-        System.err.println("Erreur lors du démarrage du serveur: " + e.getMessage());
-        e.printStackTrace();
-    }
+    } 
 }
 
 }
