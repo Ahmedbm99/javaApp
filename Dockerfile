@@ -23,7 +23,7 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Copier le JAR depuis le stage de build
-COPY --from=build /app/target/javaApp-repo-1.0.jar app.jar
+COPY --from=build /app/target/javaApp-repo-1.0-shaded.jar app.jar
 
 # Exposer un port si nécessaire (optionnel)
 # EXPOSE 5000
