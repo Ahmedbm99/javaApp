@@ -46,6 +46,7 @@ public class RestServer {
 try {
     Thread.currentThread().join();
 } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
     e.printStackTrace();
 }
 }
