@@ -35,7 +35,7 @@ public class RestServer {
      */
    public static void main(String[] args) {
    
-        final HttpServer server = startServer();
+        startServer();
 
         System.out.println(String.format(
             "Application REST démarrée avec succès!%n" +
