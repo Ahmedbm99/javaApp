@@ -2,6 +2,9 @@ package com.example.repository;
 
 import com.example.model.Product;
 import com.example.util.JPAUtil;
+
+import jakarta.persistence.EntityManager;
+
 import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
@@ -27,7 +30,14 @@ class ProductRepositoryTest {
     static void tearDown() {
         JPAUtil.closeEntityManagerFactory();
     }
-    
+    @BeforeEach
+    public void cleanDatabase() {
+        EntityManager em = JPAUtil.getEntityManager();
+        em.getTransaction().begin();
+        em.createQuery("DELETE FROM Product").executeUpdate();
+        em.getTransaction().commit();
+        em.close();
+    }
     @Test
     @Order(1)
     @DisplayName("Test de création d'un produit")

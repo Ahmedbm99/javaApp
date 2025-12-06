@@ -18,9 +18,6 @@ public class JPAUtil {
     private static EntityManagerFactory entityManagerFactory;
         private static final Logger logger = Logger.getLogger(JPAUtil.class.getName());
         
-        String url = System.getenv("DB_URL");
-        String user = System.getenv("DB_USER");
-        String password = System.getenv("DB_PASSWORD");
 
     static {
         try {
@@ -40,7 +37,7 @@ public class JPAUtil {
 private static void runFlywayMigrations() {
     try {
    Properties props = new Properties();
-        props.load(new FileInputStream("src/main/resources/vars/flyway.conf"));
+        props.load(new FileInputStream("src/main/resources/vars/flyway_test.conf"));
 
         Flyway flyway = Flyway.configure()
                 .dataSource(
