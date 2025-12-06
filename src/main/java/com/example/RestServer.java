@@ -33,22 +33,25 @@ public class RestServer {
     /**
      * Méthode principale pour démarrer le serveur
      */
-    public static void main(String[] args) {
-        try {
-            final HttpServer server = startServer();
-            
-            System.out.println(String.format(
-                "Application REST démarrée avec succès!%n" +
-                "Point d'accès: %s%n" +
-                "Appuyez sur Entrée pour arrêter le serveur...",
-                BASE_URI + "api"));
-            
-            // Permettre d'arrêter le serveur avec Entrée
-            System.in.read();
-            server.shutdownNow();
-        } catch (Exception e) {
-            System.err.println("Erreur lors du démarrage du serveur: " + e.getMessage());
-            e.printStackTrace();
-        }
+   public static void main(String[] args) {
+    try {
+        final HttpServer server = startServer();
+
+        System.out.println(String.format(
+            "Application REST démarrée avec succès!%n" +
+            "Point d'accès: %s",
+            BASE_URI + "api"));
+
+        // Garde le serveur actif indéfiniment
+        Thread.currentThread().join();
+
+    } catch (InterruptedException e) {
+        System.err.println("Le serveur a été interrompu: " + e.getMessage());
+        e.printStackTrace();
+    } catch (Exception e) {
+        System.err.println("Erreur lors du démarrage du serveur: " + e.getMessage());
+        e.printStackTrace();
     }
+}
+
 }
