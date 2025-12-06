@@ -1,25 +1,21 @@
----
-- name: Deploy Application
-  hosts: app_servers
-  become: yes
-  vars:
-    image: ""
-
+- hosts: localhost
   tasks:
+    - name: Start the Vagrant VM
+      shell: cd vagrant && vagrant up
+      args:
+        chdir: "{{ playbook_dir }}"
 
-    - name: Stop old container
-      shell: docker stop app || true
+- hosts: app_servers
+  become: yes
+  tasks:
+    - name: Login to registry
+      shell: echo "{{ registry_password }}" | docker login 192.168.220.8:5000 -u "{{ registry_username }}" --password-stdin
 
-    - name: Save previous image for rollback
-      shell: docker inspect app --format='{{.Image}}' > /var/lib/my-app/prev_image || true
+    - name: Pull docker image
+      shell: docker pull "{{ image }}"
 
-    - name: Run database migrations
-      shell: >
-        flyway -url=jdbc:postgresql://192.168.220.8:5432/appdb
-        -user=admin -password=admin migrate
+    - name: Remove old container
+      shell: docker rm -f app || true
 
-    - name: Deploy new version
-      shell: >
-        docker run -d --rm
-        --name app
-        -p
+    - name: Run container
+      shell: docker run -d --name app -p 8080:8080 "{{ image }}"
