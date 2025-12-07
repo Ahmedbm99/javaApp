@@ -28,10 +28,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductControllerTest {
     
-    @Mock
     private ProductService productService;
     
-    @InjectMocks
     private ProductController productController;
     
     private Product testProduct;

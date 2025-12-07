@@ -27,10 +27,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
     
-    @Mock
     private UserService userService;
     
-    @InjectMocks
     private UserController userController;
     
     private User testUser;
