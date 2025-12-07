@@ -1,19 +1,19 @@
 ---
 - name:  Rollback Application
-  hosts: app_servers
+  hosts: server
   become: yes
 
   vars:
     registry_url: "192.168.220.8:5000"
-    registry_username: "{{ registry_username }}"
-    registry_password: "{{ registry_password }}"
+    registry_user: "{{ registry_username }}"
+    registry_pass: "{{ registry_password }}"
     image_name: "docker-app"
 
   tasks:
 
     # Login to Docker registry
     - name: Login to registry
-      shell: echo "{{ registry_password }}" | docker login {{ registry_url }} -u "{{ registry_username }}" --password-stdin
+      shell: echo "{{ registry_pass }}" | docker login {{ registry_url }} -u "{{ registry_user }}" --password-stdin
 
     # Get current running image
     - name: Get current image
