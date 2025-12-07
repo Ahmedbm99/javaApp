@@ -5,35 +5,35 @@
     registry_username: "{{ registry_username }}"
     registry_password: "{{ registry_password }}"
     image: "{{ image }}"
+
   tasks:
     - name: Login to Docker registry
       shell: echo "{{ registry_password }}" | docker login {{ registry_url }} -u "{{ registry_username }}" --password-stdin
+
     - name: Ensure app directory exists
       file:
-        path: /var/lib/app   
-        state: directory     
-        mode: '0755'         # Permissions: owner=rwx, group=rx, others=rx
-
+        path: /app/target/docker_images_backup
+        state: directory
+        mode: '0755'
 
     - name: Save current image before update
-      shell: docker inspect --format='{{.Config.Image}}' app > /var/lib/app/prev_image
+      shell: docker inspect --format='{{.Config.Image}}' app > /app/target/docker_images_backup/prev_image
       ignore_errors: yes
+
     - name: Pull docker image
       shell: docker pull "{{ image }}"
 
-    - name: Stop old container if running
-      shell: docker ps -q -f name=app | grep -q . && docker stop app 
+    # Force stop if running
+    - name: Force stop container if exists
+      shell: docker stop app 
 
-    - name: Wait for container to stop completely
-      pause:
-        seconds: 5   # wait 5 seconds
+    # Force remove if exists (avoids name conflict)
+    - name: Force remove container if exists
+      shell: docker rm -f app 
 
-    - name: Remove old container if exists
-      shell: docker ps -aq -f name=app | grep -q . && docker rm app
-
-    - name: Wait for container name to be freed
-      pause:
-        seconds: 5
+    # Optional but safer
+    - name: Prune stopped containers
+      shell: docker container prune -f
 
     - name: Run container
       shell: docker run -d --name app -p 3000:3000 "{{ image }}"
