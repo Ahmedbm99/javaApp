@@ -42,7 +42,16 @@ class JPAUtilTest {
     @Test
     @Order(4)
     void testCloseEntityManagerFactory() {
-        JPAUtil.closeEntityManagerFactory();
-        assertFalse(JPAUtil.getEntityManagerFactory().isOpen());
+        // Act
+        assertDoesNotThrow(() -> JPAUtil.closeEntityManagerFactory());
+
+        // Assert: calling getEntityManagerFactory now should throw
+        assertThrows(IllegalStateException.class, JPAUtil::getEntityManagerFactory);
     }
+    @Test
+    @Order(5)
+    void testCloseEntityManagerWithNull() {
+        assertDoesNotThrow(() -> JPAUtil.closeEntityManager(null));
+    }
+
 }
