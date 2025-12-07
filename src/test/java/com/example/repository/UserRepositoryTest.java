@@ -2,9 +2,6 @@ package com.example.repository;
 
 import com.example.model.User;
 import com.example.util.JPAUtil;
-
-import jakarta.persistence.EntityManager;
-
 import org.junit.jupiter.api.*;
 
 import java.util.List;
@@ -25,15 +22,7 @@ class UserRepositoryTest {
         JPAUtil.init("example-pu-test", "src/main/resources/vars/flyway_test.conf");
         userRepository = new UserRepository();
     }
-    @BeforeEach
-public void cleanDatabase() {
-    EntityManager em = JPAUtil.getEntityManager();
-    em.getTransaction().begin();
-    em.createQuery("DELETE FROM User").executeUpdate();
-    em.createQuery("DELETE FROM Product").executeUpdate(); // si tu as des produits aussi
-    em.getTransaction().commit();
-    em.close();
-}
+
 
     @AfterAll
     static void tearDown() {
