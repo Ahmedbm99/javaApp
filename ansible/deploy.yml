@@ -17,7 +17,7 @@
         mode: '0755'
 
     - name: Save current image before update
-      shell: docker save app -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar
+      shell: docker save app -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar {{ image }}
       ignore_errors: yes
     - name: Check if registry is reachable
       shell: docker login {{ registry_url }} -u {{ registry_username }} -p {{ registry_password }}
