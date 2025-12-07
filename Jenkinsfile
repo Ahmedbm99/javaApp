@@ -147,7 +147,29 @@ pipeline {
                 }
             }
         }
+        stage('Health Check') {
+          steps {
+              script {
+                  def retries = 5
+                  def status = 1
+                  for (int i = 0; i < retries; i++) {
+                      status = sh(script: 'bash ansible/healthcheck.sh', returnStatus: true)
+                      if (status == 0) {
+                          echo "Application is healthy!"
+                          break
+                      } else {
+                          echo "Health check failed. Retrying in 5s..."
+                          sleep 5
+                      }
+                  }
+                  if (status != 0) {
+                      error("Application failed health check. Triggering rollback...")
+                  }
+              }
+          }
+        }
     }
+     
 
     post {
  
