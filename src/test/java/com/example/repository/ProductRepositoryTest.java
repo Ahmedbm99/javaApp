@@ -15,189 +15,165 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ProductRepositoryTest {
-
+    
     private static ProductRepository productRepository;
+    
+@BeforeAll
+static void setUp() {
+    // Initialize JPA (already exists)
+    JPAUtil.init("example-pu-test", "src/main/resources/vars/flyway_test.conf");
 
-    @BeforeAll
-    static void setUp() {
-        try {
-            JPAUtil.init("example-pu-test", "src/main/resources/vars/flyway_test.conf");
+    // Force coverage for getEntityManagerFactory()
+    assertNotNull(JPAUtil.getEntityManagerFactory());
 
-            // Force coverage
-            assertNotNull(JPAUtil.getEntityManagerFactory(), "EntityManagerFactory should not be null");
+    // Force coverage for getEntityManager()
+    var em = JPAUtil.getEntityManager();
+    assertNotNull(em);
+    JPAUtil.closeEntityManager(em);
 
-            var em = JPAUtil.getEntityManager();
-            assertNotNull(em, "EntityManager should not be null");
-            JPAUtil.closeEntityManager(em);
+    productRepository = new ProductRepository();
+}
 
-            productRepository = new ProductRepository();
-        } catch (Exception e) {
-            fail("Exception during test initialization: " + e.getMessage());
-        }
-    }
+@AfterAll
+static void tearDown() {
+    // Force coverage for closeEntityManagerFactory()
+    JPAUtil.closeEntityManagerFactory();
+}
 
-    @AfterAll
-    static void tearDown() {
-        try {
-            JPAUtil.closeEntityManagerFactory();
-        } catch (Exception e) {
-            fail("Failed to close EMF: " + e.getMessage());
-        }
-    }
 
     @Test
     @Order(1)
-    @DisplayName("Création de produit")
+    @DisplayName("Test de création d'un produit")
     void testSaveProduct() {
-        Product product = new Product("Laptop", "Ordinateur puissant",
-                new BigDecimal("999.99"), 10, "Electronics");
-
-        Product saved = productRepository.save(product);
-
-        assertAll(
-                () -> assertNotNull(saved, "Saved product must not be null"),
-                () -> assertNotNull(saved.getId(), "ID must be assigned"),
-                () -> assertEquals("Laptop", saved.getName(), "Name mismatch"),
-                () -> assertEquals(new BigDecimal("999.99"), saved.getPrice(), "Price mismatch"),
-                () -> assertEquals(10, saved.getQuantity(), "Quantity mismatch"),
-                () -> assertEquals("Electronics", saved.getCategory(), "Category mismatch"),
-                () -> assertNotNull(saved.getCreatedAt(), "CreatedAt must be set")
-        );
+        Product product = new Product("Laptop", "Ordinateur portable haute performance", 
+                                     new BigDecimal("999.99"), 10, "Electronics");
+        Product savedProduct = productRepository.save(product);
+        
+        assertNotNull(savedProduct);
+        assertNotNull(savedProduct.getId());
+        assertEquals("Laptop", savedProduct.getName());
+        assertEquals(new BigDecimal("999.99"), savedProduct.getPrice());
+        assertEquals(10, savedProduct.getQuantity());
+        assertEquals("Electronics", savedProduct.getCategory());
+        assertNotNull(savedProduct.getCreatedAt());
     }
-
+    
     @Test
     @Order(2)
-    @DisplayName("Recherche par ID")
+    @DisplayName("Test de recherche d'un produit par ID")
     void testFindById() {
-        Product product = new Product("Smartphone", "Téléphone",
-                new BigDecimal("599.99"), 25, "Electronics");
-
-        Product saved = productRepository.save(product);
-
-        Optional<Product> found = productRepository.findById(saved.getId());
-
-        assertAll(
-                () -> assertTrue(found.isPresent(), "Product should be found"),
-                () -> assertEquals(saved.getId(), found.get().getId(), "ID mismatch"),
-                () -> assertEquals("Smartphone", found.get().getName(), "Name mismatch")
-        );
+        Product product = new Product("Smartphone", "Téléphone intelligent", 
+                                     new BigDecimal("599.99"), 25, "Electronics");
+        Product savedProduct = productRepository.save(product);
+        
+        Optional<Product> foundProduct = productRepository.findById(savedProduct.getId());
+        
+        assertTrue(foundProduct.isPresent());
+        assertEquals(savedProduct.getId(), foundProduct.get().getId());
+        assertEquals("Smartphone", foundProduct.get().getName());
     }
-
+    
     @Test
     @Order(3)
-    @DisplayName("Récupération de tous les produits")
+    @DisplayName("Test de récupération de tous les produits")
     void testFindAll() {
         List<Product> products = productRepository.findAll();
-
-        assertNotNull(products, "Products list should not be null");
-        assertFalse(products.isEmpty(), "Products list should not be empty");
+        
+        assertNotNull(products);
+        assertFalse(products.isEmpty());
+        assertTrue(products.size() >= 2); // Au moins les 2 produits créés précédemment
     }
-
+    
     @Test
     @Order(4)
-    @DisplayName("Recherche par catégorie")
+    @DisplayName("Test de recherche de produits par catégorie")
     void testFindByCategory() {
-        Product product = new Product("T-Shirt", "Coton",
-                new BigDecimal("19.99"), 50, "Clothing");
+        Product product = new Product("T-Shirt", "T-shirt en coton", 
+                                     new BigDecimal("19.99"), 50, "Clothing");
         productRepository.save(product);
-
-        List<Product> list = productRepository.findByCategory("Clothing");
-
-        assertNotNull(list, "List should not be null");
-        assertFalse(list.isEmpty(), "List should not be empty");
-
-        list.forEach(p -> assertEquals("Clothing", p.getCategory(), "Incorrect category"));
+        
+        List<Product> clothingProducts = productRepository.findByCategory("Clothing");
+        
+        assertNotNull(clothingProducts);
+        assertFalse(clothingProducts.isEmpty());
+        assertTrue(clothingProducts.stream().allMatch(p -> "Clothing".equals(p.getCategory())));
     }
-
+    
     @Test
     @Order(5)
-    @DisplayName("Recherche par prix max")
+    @DisplayName("Test de recherche de produits par prix maximum")
     void testFindByPriceLessThanOrEqual() {
-        productRepository.save(
-                new Product("Book", "Programming",
-                        new BigDecimal("29.99"), 100, "Books")
-        );
-
-        var results = productRepository.findByPriceLessThanOrEqual(new BigDecimal("100.00"));
-
-        assertNotNull(results, "Results should not be null");
-        assertFalse(results.isEmpty(), "Should return results");
-
-        results.forEach(p ->
-                assertTrue(
-                        p.getPrice().compareTo(new BigDecimal("100.00")) <= 0,
-                        "Product price is above limit"
-                )
-        );
+        Product cheapProduct = new Product("Book", "Livre de programmation", 
+                                          new BigDecimal("29.99"), 100, "Books");
+        productRepository.save(cheapProduct);
+        
+        List<Product> affordableProducts = productRepository.findByPriceLessThanOrEqual(new BigDecimal("100.00"));
+        
+        assertNotNull(affordableProducts);
+        assertFalse(affordableProducts.isEmpty());
+        assertTrue(affordableProducts.stream()
+                .allMatch(p -> p.getPrice().compareTo(new BigDecimal("100.00")) <= 0));
     }
-
+    
     @Test
     @Order(6)
-    @DisplayName("Produits en stock")
+    @DisplayName("Test de recherche de produits en stock")
     void testFindInStock() {
-        productRepository.save(
-                new Product("OutOfStock", "Test",
-                        new BigDecimal("10.00"), 0, "Test")
-        );
-
-        List<Product> list = productRepository.findInStock();
-
-        assertNotNull(list, "List should not be null");
-
-        list.forEach(p ->
-                assertTrue(p.getQuantity() > 0, "Product must be in stock")
-        );
+        Product outOfStockProduct = new Product("OutOfStock", "Produit épuisé", 
+                                                new BigDecimal("10.00"), 0, "Test");
+        productRepository.save(outOfStockProduct);
+        
+        List<Product> inStockProducts = productRepository.findInStock();
+        
+        assertNotNull(inStockProducts);
+        assertTrue(inStockProducts.stream().allMatch(p -> p.getQuantity() > 0));
     }
-
+    
     @Test
     @Order(7)
-    @DisplayName("Mise à jour de produit")
+    @DisplayName("Test de mise à jour d'un produit")
     void testUpdateProduct() {
-        Product product = new Product("Tablet", "Tablette",
-                new BigDecimal("299.99"), 15, "Electronics");
-
-        Product saved = productRepository.save(product);
-
-        saved.setPrice(new BigDecimal("249.99"));
-        saved.setQuantity(20);
-
-        Product updated = productRepository.update(saved);
-
-        assertAll(
-                () -> assertEquals(new BigDecimal("249.99"), updated.getPrice(), "Price mismatch"),
-                () -> assertEquals(20, updated.getQuantity(), "Quantity mismatch"),
-                () -> assertNotNull(updated.getUpdatedAt(), "updatedAt must be set")
-        );
+        Product product = new Product("Tablet", "Tablette", 
+                                     new BigDecimal("299.99"), 15, "Electronics");
+        Product savedProduct = productRepository.save(product);
+        
+        savedProduct.setPrice(new BigDecimal("249.99"));
+        savedProduct.setQuantity(20);
+        Product updatedProduct = productRepository.update(savedProduct);
+        
+        assertEquals(new BigDecimal("249.99"), updatedProduct.getPrice());
+        assertEquals(20, updatedProduct.getQuantity());
+        assertNotNull(updatedProduct.getUpdatedAt());
     }
-
+    
     @Test
     @Order(8)
-    @DisplayName("Suppression de produit")
+    @DisplayName("Test de suppression d'un produit")
     void testDeleteProduct() {
-        Product saved = productRepository.save(
-                new Product("ToDelete", "Test", new BigDecimal("5.00"), 1, "Test")
-        );
-
-        Long id = saved.getId();
-
-        productRepository.deleteById(id);
-
-        assertFalse(productRepository.findById(id).isPresent(), "Product should be deleted");
+        Product product = new Product("ToDelete", "Produit à supprimer", 
+                                     new BigDecimal("5.00"), 1, "Test");
+        Product savedProduct = productRepository.save(product);
+        Long productId = savedProduct.getId();
+        
+        productRepository.deleteById(productId);
+        
+        Optional<Product> deletedProduct = productRepository.findById(productId);
+        assertFalse(deletedProduct.isPresent());
     }
-
+    
     @Test
     @Order(9)
-    @DisplayName("Comptage produits")
+    @DisplayName("Test de comptage des produits")
     void testCount() {
         long count = productRepository.count();
-        assertTrue(count >= 0, "Count should be positive");
+        assertTrue(count >= 0);
     }
-
+    
     @Test
     @Order(10)
-    @DisplayName("Produit inexistant")
+    @DisplayName("Test de recherche d'un produit inexistant")
     void testFindNonExistentProduct() {
         Optional<Product> product = productRepository.findById(99999L);
-        assertFalse(product.isPresent(), "Product should not exist");
+        assertFalse(product.isPresent());
     }
 }

@@ -68,3 +68,14 @@
 
     - name: Run rollback container
       shell: docker run -d --name app -p 3000:3000 {{ rollback_image }}
+
+    - name: Rollback last DB migration
+      shell: mvn flyway:undo
+      args:
+          chdir: "{{ project_dir }}"
+      ignore_errors: yes
+      register: flyway_undo_result
+
+    - name: Show Flyway rollback result
+      debug:
+        var: flyway_undo_result.stdout_lines

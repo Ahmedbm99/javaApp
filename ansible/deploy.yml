@@ -1,4 +1,4 @@
-- hosts: server
+- hosts: app_servers
   become: yes
   vars:
     registry_url: "192.168.220.8:5000"
@@ -17,7 +17,7 @@
         mode: '0755'
 
     - name: Save current image before update
-      shell: docker inspect --format='{{.Config.Image}}' app > /app/target/docker_images_backup/prev_image
+      shell: docker inspect --format='{{'{{'}}.Config.Image{{'}}'}}' app > /app/target/docker_images_backup/prev_image
       ignore_errors: yes
 
     - name: Pull docker image
