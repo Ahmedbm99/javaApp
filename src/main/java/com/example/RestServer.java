@@ -69,7 +69,6 @@ public class RestServer {
             logger.info("Serveur interrompu");
         } catch (Exception e) {
             logger.severe("Erreur fatale lors du démarrage du serveur: " + e.getMessage());
-            e.printStackTrace();
             System.exit(1);
         }
     }
