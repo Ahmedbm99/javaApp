@@ -8,7 +8,7 @@
     registry_user: "{{ registry_username }}"
     registry_pass: "{{ registry_password }}"
     image_name: "docker-app"
-    backup_dir: "/var/lib/jenkins/workspace/CICD/target/docker_images_backup"
+    backup_dir: "/home/server/docker-backups"
     project_dir: "/CICD"  # directory where your project/pom.xml is located
 
   tasks:

@@ -12,12 +12,12 @@
 
     - name: Ensure app directory exists
       file:
-        path: /app/target/docker_images_backup
+        path: /home/server/docker-backups
         state: directory
         mode: '0755'
 
     - name: Save current image before update
-      shell: docker save app -o /var/lib/jenkins/workspace/CICD/target/docker_images_backup/app_{{ ansible_date_time.iso8601 }}.tar
+      shell: docker save app -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar
       ignore_errors: yes
     - name: Check if registry is reachable
       shell: docker login {{ registry_url }} -u {{ registry_username }} -p {{ registry_password }}
@@ -28,7 +28,7 @@
       shell: |
         if [ {{ login_result.rc }} -ne 0 ]; then
           echo "Registry unreachable, loading backup image..."
-          docker load -i $(ls -t /var/lib/jenkins/workspace/CICD/target/docker_images_backup/*.tar | head -1)
+          docker load -i $(ls -t /home/server/docker-backups/*.tar | head -1)
         else
           docker pull "{{ image }}"
         fi
