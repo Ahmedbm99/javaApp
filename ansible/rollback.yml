@@ -1,6 +1,6 @@
 ---
 - name:  Rollback Application
-  hosts: server
+  hosts: app_servers
   become: yes
 
   vars:
