@@ -13,7 +13,7 @@ RUN mvn dependency:go-offline -B
 # Copy source code
 COPY src ./src
 
-# Build project and create shaded JAR
+# Build project and create  JAR
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime with JRE only
@@ -22,7 +22,7 @@ FROM eclipse-temurin:17-jre-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy shaded JAR from build stage
+# Copy  JAR from build stage
 COPY --from=build /app/target/javaApp-repo-1.0.jar app.jar
 
 # Expose port (your app port)

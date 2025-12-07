@@ -6,6 +6,7 @@ import jakarta.persistence.Persistence;
 import org.flywaydb.core.Flyway;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -27,11 +28,26 @@ public class JPAUtil {
 
     /**
      * Exécute les migrations Flyway à partir d'un fichier de configuration
+     * Le fichier peut être chargé depuis le classpath (pour la production) ou depuis le système de fichiers (pour les tests)
      */
     private static void runFlywayMigrations(String configFilePath) {
         Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream(configFilePath)) {
-            props.load(fis);
+        
+        // Essayer d'abord de charger depuis le classpath (pour la production dans un JAR)
+        InputStream inputStream = JPAUtil.class.getClassLoader().getResourceAsStream(configFilePath);
+        
+        // Si pas trouvé dans le classpath, essayer comme fichier système (pour les tests)
+        if (inputStream == null) {
+            try {
+                inputStream = new FileInputStream(configFilePath);
+            } catch (Exception e) {
+                logger.severe("Impossible de charger le fichier de configuration Flyway: " + configFilePath);
+                throw new RuntimeException("Fichier de configuration Flyway introuvable: " + configFilePath, e);
+            }
+        }
+        
+        try (InputStream is = inputStream) {
+            props.load(is);
 
             Flyway flyway = Flyway.configure()
                     .dataSource(
