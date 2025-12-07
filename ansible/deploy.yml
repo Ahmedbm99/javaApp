@@ -15,10 +15,6 @@
         path: /home/server/docker-backups
         state: directory
         mode: '0755'
-
-    - name: Save current image before update
-      shell: docker save  -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar {{ image }}
-      ignore_errors: yes
     - name: Check if registry is reachable
       shell: docker login {{ registry_url }} -u {{ registry_username }} -p {{ registry_password }}
       register: login_result
@@ -33,6 +29,10 @@
           docker pull "{{ image }}"
         fi
 
+
+    - name: Save current image before update
+      shell: docker save  -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar {{ image }}
+      ignore_errors: yes
 
     # Force stop if running
     - name: Force stop container if exists
