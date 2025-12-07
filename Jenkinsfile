@@ -102,13 +102,13 @@ pipeline {
                     ]) {
                         retry(3) {
                             sh """
-                                echo "Logging in to Docker registry..."
+                                echo "Logging in to Nexus registry..."
                                 docker login 192.168.220.8:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
 
-                                echo "Building Docker image..."
+                                echo "Building Nexus image..."
                                 docker build -t ${REGISTRY}:${commitId} -f ./Dockerfile .
 
-                                echo "Pushing Docker image..."
+                                echo "Pushing Nexus image..."
                                 docker push ${REGISTRY}:${commitId}
                             """
                         }
