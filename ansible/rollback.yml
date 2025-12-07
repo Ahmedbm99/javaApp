@@ -1,27 +1,70 @@
 ---
-- name: Rollback Application
+- name:  Rollback Application
   hosts: app_servers
   become: yes
 
+  vars:
+    registry_url: "192.168.220.8:5000"
+    registry_username: "{{ registry_username }}"
+    registry_password: "{{ registry_password }}"
+    image_name: "docker-app"
+
   tasks:
 
-    - name: Check if previous image exists
-      stat:
-        path: /app/target/docker_images_backup/prev_image
-      register: prev_image_file
+    # Login to Docker registry
+    - name: Login to registry
+      shell: echo "{{ registry_password }}" | docker login {{ registry_url }} -u "{{ registry_username }}" --password-stdin
 
-    - name: Read previous image
-      shell: cat /app/target/docker_images_backup/prev_image
-      register: rollback_image
-      when: prev_image_file.stat.exists
+    # Get current running image
+    - name: Get current image
+      shell: docker inspect --format='{{.Config.Image}}' app
+      register: current_image
 
+    - name: Extract current tag
+      set_fact:
+        current_tag: "{{ current_image.stdout.split(':')[-1] }}"
 
-    - name: Stop current container
-      shell: docker stop app 
+    - name: Extract current build number
+      set_fact:
+        current_build: "{{ current_tag.split('-')[-1] | int }}"
 
-    - name: Rollback to previous image
-      shell: >
-        docker run -d
-        --name app
-        -p 3000:3000
-        {{ rollback_image.stdout }}
+    # Get authenticated tag list
+    - name: Get tags from registry with auth
+      shell: |
+        curl -s -u {{ registry_username }}:{{ registry_password }} \
+        http://{{ registry_url }}/v2/{{ image_name }}/tags/list \
+        | jq -r '.tags[]'
+      register: tag_list
+
+    # Pick nearest previous tag
+    - name: Select rollback tag safely
+      set_fact:
+        rollback_build: >-
+          {{ (tag_list.stdout_lines
+              | select('match','^build-')
+              | map('regex_replace','build-','')
+              | map('int')
+              | select('lt', current_build)
+              | list
+              | max)
+          }}
+
+    - name: Stop if no rollback image
+      fail:
+      when: rollback_build is not defined
+
+    # Build rollback image
+    - name: Build rollback image
+      set_fact:
+        rollback_image: "{{ registry_url }}/{{ image_name }}:build-{{ rollback_build }}"
+
+    # Pull rollback image
+    - name: Pull rollback image
+      shell: docker pull {{ rollback_image }}
+
+    # Replace container
+    - name: Remove existing container
+      shell: docker rm -f app || true
+
+    - name: Run rollback container
+      shell: docker run -d --name app -p 3000:3000 {{ rollback_image }}
