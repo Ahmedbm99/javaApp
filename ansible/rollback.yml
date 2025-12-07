@@ -1,92 +1,37 @@
----
-- name: Rollback Application
-  hosts: app_servers
-  become: yes
+    # ----------------------------
+    # Find last backup file
+    # ----------------------------
+    - name: Get last backup file
+      shell: ls -t {{ backup_dir }}/*.tar | head -1
+      register: last_backup
+      failed_when: last_backup.stdout == ""
+      ignore_errors: no
 
-  vars:
-    registry_url: "192.168.220.8:5000"
-    registry_user: "{{ registry_username }}"
-    registry_pass: "{{ registry_password }}"
-    image_name: "docker-app"
-    backup_dir: "/home/server/docker-backups"
-    project_dir: "/CICD"  # directory where your project/pom.xml is located
-
-  tasks:
+    - name: Show last backup file
+      debug:
+        msg: "Last backup file: {{ last_backup.stdout }}"
 
     # ----------------------------
-    # Login to Docker registry
+    # Load backup image
     # ----------------------------
-    - name: Login to registry
-      shell: echo "{{ registry_pass }}" | docker login {{ registry_url }} -u "{{ registry_user }}" --password-stdin
-      ignore_errors: yes
+    - name: Load backup image
+      shell: docker load -i {{ last_backup.stdout }}
+      register: loaded_image
+
+    - name: Show loaded image result
+      debug:
+        msg: "{{ loaded_image.stdout }}"
 
     # ----------------------------
-    # Check for local backup
+    # Extract image name from load output
     # ----------------------------
-    - name: Load latest local backup if exists
-      shell: |
-        if ls -t {{ backup_dir }}/*.tar 1> /dev/null 2>&1; then
-            docker load -i $(ls -t {{ backup_dir }}/*.tar | head -1)
-        fi
-      ignore_errors: yes
-
-    # ----------------------------
-    # Get current running image
-    # ----------------------------
-    - name: Get current running image
-      shell: docker inspect --format='{{.Config.Image}}' app
-      register: current_image
-      ignore_errors: yes
-
-    - name: Extract current tag
+    - name: Extract image full name
       set_fact:
-        current_tag: "{{ current_image.stdout.split(':')[-1] | default('build-0') }}"
+        backup_image: "{{ loaded_image.stdout | regex_search('Loaded image: (.*)', '\\1') }}"
 
-    - name: Extract current build number
-      set_fact:
-        current_build: "{{ current_tag.split('-')[-1] | int }}"
-
-    # ----------------------------
-    # Fetch tags from registry
-    # ----------------------------
-    - name: Get tags from registry
-      shell: |
-        curl -s -u {{ registry_user }}:{{ registry_pass }} \
-        http://{{ registry_url }}/v2/{{ image_name }}/tags/list \
-        | jq -r '.tags[]'
-      register: tag_list
-      ignore_errors: yes
-
-    # ----------------------------
-    # Select nearest previous tag
-    # ----------------------------
-    - name: Determine rollback tag
-      set_fact:
-        rollback_build: >-
-          {{ (tag_list.stdout_lines
-              | select('match','^build-')
-              | map('regex_replace','build-','')
-              | map('int')
-              | select('lt', current_build)
-              | list
-              | max(default=0)
-          ) }}
-
-    - name: Fail if no rollback image found
-      fail:
-        msg: "No previous image available for rollback!"
-      when: rollback_build == 0
-
-    - name: Build rollback image full tag
-      set_fact:
-        rollback_image: "{{ registry_url }}/{{ image_name }}:build-{{ rollback_build }}"
-
-    # ----------------------------
-    # Pull rollback image
-    # ----------------------------
-    - name: Pull rollback image from registry
-      shell: docker pull {{ rollback_image }}
-      ignore_errors: yes
+    - name: Show extracted image name
+      debug:
+        var: backup_image
 
     # ----------------------------
     # Stop & remove current container
@@ -100,21 +45,7 @@
       ignore_errors: yes
 
     # ----------------------------
-    # Run rollback container
+    # Run container from backup image
     # ----------------------------
-    - name: Start rollback container
-      shell: docker run -d --name app -p 3000:3000 {{ rollback_image }}
-
-    # ----------------------------
-    # Rollback last DB migration
-    # ----------------------------
-    - name: Undo last Flyway migration
-      shell: mvn flyway:undo
-      args:
-        chdir: "{{ project_dir }}"
-      ignore_errors: yes
-      register: flyway_undo_result
-
-    - name: Show Flyway rollback result
-      debug:
-        var: flyway_undo_result.stdout_lines
+    - name: Start container using backup image
+      shell: docker run -d --name app -p 3000:3000 {{ backup_image }}
