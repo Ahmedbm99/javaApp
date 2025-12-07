@@ -64,7 +64,7 @@
 
     # Replace container
     - name: Remove existing container
-      shell: docker rm -f app || true
+      shell: docker rm -f app
 
     - name: Run rollback container
       shell: docker run -d --name app -p 3000:3000 {{ rollback_image }}
