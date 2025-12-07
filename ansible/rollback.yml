@@ -5,9 +5,16 @@
 
   tasks:
 
+    - name: Check if previous image exists
+      stat:
+        path: /var/lib/app/prev_image
+      register: prev_image_file
+
     - name: Read previous image
       shell: cat /var/lib/app/prev_image
       register: rollback_image
+      when: prev_image_file.stat.exists
+
 
     - name: Stop current container
       shell: docker stop app 

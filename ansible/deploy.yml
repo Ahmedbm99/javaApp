@@ -22,18 +22,18 @@
       shell: docker pull "{{ image }}"
 
     - name: Stop old container if running
-      shell: docker ps -q -f name=app | grep -q . && docker stop app || true
+      shell: docker ps -q -f name=app | grep -q . && docker stop app 
 
     - name: Wait for container to stop completely
       pause:
         seconds: 5   # wait 5 seconds
 
     - name: Remove old container if exists
-      shell: docker ps -aq -f name=app | grep -q . && docker rm app || true
+      shell: docker ps -aq -f name=app | grep -q . && docker rm app
 
     - name: Wait for container name to be freed
       pause:
-        seconds: 2
+        seconds: 5
 
     - name: Run container
       shell: docker run -d --name app -p 3000:3000 "{{ image }}"
