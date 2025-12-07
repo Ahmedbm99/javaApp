@@ -25,7 +25,7 @@ public class RestServer {
         try {
             logger.info("Initialisation de JPA pour la production...");
             // Le fichier est dans src/main/resources/vars/flyway.conf, donc accessible via classpath comme "vars/flyway.conf"
-            JPAUtil.init("example-pu", "vars/flyway.conf");
+            JPAUtil.init("example-pu", "/app/config/flyway.conf");
             logger.info("JPA initialisé avec succès");
         } catch (Exception e) {
             logger.severe("Erreur lors de l'initialisation de JPA: " + e.getMessage());
