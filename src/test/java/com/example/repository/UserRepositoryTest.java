@@ -34,6 +34,7 @@ class UserRepositoryTest {
     em.getTransaction().begin();
     em.createQuery("DELETE FROM User").executeUpdate();
     em.getTransaction().commit();
+
     em.close();
     }
 
