@@ -5,46 +5,65 @@
     registry_username: "{{ registry_username }}"
     registry_password: "{{ registry_password }}"
     image: "{{ image }}"
+    app_name: "app"
+    app_port: 3000
+    backup_dir: "/home/server/docker-backups"
 
   tasks:
-    - name: Login to Docker registry
-      shell: echo "{{ registry_password }}" | docker login {{ registry_url }} -u "{{ registry_username }}" --password-stdin
-
-    - name: Ensure app directory exists
+    - name: Ensure backup directory exists
       file:
-        path: /home/server/docker-backups
+        path: "{{ backup_dir }}"
         state: directory
         mode: '0755'
-    - name: Check if registry is reachable
+
+    - name: Check registry connectivity
       shell: docker login {{ registry_url }} -u {{ registry_username }} -p {{ registry_password }}
       register: login_result
       ignore_errors: yes
 
-    - name: Use local backup if registry is down
+    - name: Pull image from registry or use backup
+      block:
+        - name: Pull image from registry
+          shell: docker pull "{{ image }}"
+          when: login_result.rc == 0
+
+        - name: Load latest backup image
+          shell: docker load -i $(ls -t {{ backup_dir }}/*.tar | head -1)
+          when: login_result.rc != 0
+
+    - name: Save current image as backup
       shell: |
-        if [ {{ login_result.rc }} -ne 0 ]; then
-          echo "Registry unreachable, loading backup image..."
-          docker load -i $(ls -t /home/server/docker-backups/*.tar | head -1)
-        else
-          docker pull "{{ image }}"
+        if docker inspect --type=image "{{ image }}" >/dev/null 2>&1; then
+          docker save -o {{ backup_dir }}/{{ app_name }}_{{ ansible_date_time.iso8601 }}.tar {{ image }}
         fi
-
-
-    - name: Save current image before update
-      shell: docker save  -o /home/server/docker-backups/app_{{ ansible_date_time.iso8601 }}.tar {{ image }}
       ignore_errors: yes
 
-    # Force stop if running
-    - name: Force stop container if exists
-      shell: docker stop app 
+    - name: Stop container if running
+      shell: |
+        if docker ps -q -f name={{ app_name }} >/dev/null; then
+          docker stop {{ app_name }}
+        fi
+      ignore_errors: yes
 
-    # Force remove if exists (avoids name conflict)
-    - name: Force remove container if exists
-      shell: docker rm -f app 
+    - name: Remove container if exists
+      shell: |
+        if docker ps -aq -f name={{ app_name }} >/dev/null; then
+          docker rm -f {{ app_name }}
+        fi
+      ignore_errors: yes
 
-    # Optional but safer
     - name: Prune stopped containers
       shell: docker container prune -f
+      ignore_errors: yes
 
     - name: Run container
-      shell: docker run -d --name app -p 3000:3000 "{{ image }}"
+      shell: docker run -d --name {{ app_name }} -p {{ app_port }}:{{ app_port }} "{{ image }}"
+      register: run_result
+      ignore_errors: yes
+
+    - name: Rollback if container failed to start
+      shell: |
+        echo "Container failed to start, loading last backup..."
+        docker load -i $(ls -t {{ backup_dir }}/*.tar | head -1)
+        docker run -d --name {{ app_name }} -p {{ app_port }}:{{ app_port }} "{{ image }}"
+      when: run_result.rc != 0
