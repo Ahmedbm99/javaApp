@@ -1,5 +1,5 @@
 ---
-- name:  Rollback Application
+- name: Rollback Application
   hosts: app_servers
   become: yes
 
@@ -8,36 +8,59 @@
     registry_user: "{{ registry_username }}"
     registry_pass: "{{ registry_password }}"
     image_name: "docker-app"
+    backup_dir: "/app/target/docker_images_backup"
+    project_dir: "/app"  # directory where your project/pom.xml is located
 
   tasks:
 
+    # ----------------------------
     # Login to Docker registry
+    # ----------------------------
     - name: Login to registry
       shell: echo "{{ registry_pass }}" | docker login {{ registry_url }} -u "{{ registry_user }}" --password-stdin
+      ignore_errors: yes
 
+    # ----------------------------
+    # Check for local backup
+    # ----------------------------
+    - name: Load latest local backup if exists
+      shell: |
+        if ls -t {{ backup_dir }}/*.tar 1> /dev/null 2>&1; then
+            docker load -i $(ls -t {{ backup_dir }}/*.tar | head -1)
+        fi
+      ignore_errors: yes
+
+    # ----------------------------
     # Get current running image
-    - name: Get current image
+    # ----------------------------
+    - name: Get current running image
       shell: docker inspect --format='{{.Config.Image}}' app
       register: current_image
+      ignore_errors: yes
 
     - name: Extract current tag
       set_fact:
-        current_tag: "{{ current_image.stdout.split(':')[-1] }}"
+        current_tag: "{{ current_image.stdout.split(':')[-1] | default('build-0') }}"
 
     - name: Extract current build number
       set_fact:
         current_build: "{{ current_tag.split('-')[-1] | int }}"
 
-    # Get authenticated tag list
-    - name: Get tags from registry with auth
+    # ----------------------------
+    # Fetch tags from registry
+    # ----------------------------
+    - name: Get tags from registry
       shell: |
-        curl -s -u {{ registry_username }}:{{ registry_password }} \
+        curl -s -u {{ registry_user }}:{{ registry_pass }} \
         http://{{ registry_url }}/v2/{{ image_name }}/tags/list \
         | jq -r '.tags[]'
       register: tag_list
+      ignore_errors: yes
 
-    # Pick nearest previous tag
-    - name: Select rollback tag safely
+    # ----------------------------
+    # Select nearest previous tag
+    # ----------------------------
+    - name: Determine rollback tag
       set_fact:
         rollback_build: >-
           {{ (tag_list.stdout_lines
@@ -46,33 +69,49 @@
               | map('int')
               | select('lt', current_build)
               | list
-              | max)
-          }}
+              | max(default=0)
+          ) }}
 
-    - name: Stop if no rollback image
+    - name: Fail if no rollback image found
       fail:
-      when: rollback_build is not defined
+        msg: "No previous image available for rollback!"
+      when: rollback_build == 0
 
-    # Build rollback image
-    - name: Build rollback image
+    - name: Build rollback image full tag
       set_fact:
         rollback_image: "{{ registry_url }}/{{ image_name }}:build-{{ rollback_build }}"
 
+    # ----------------------------
     # Pull rollback image
-    - name: Pull rollback image
+    # ----------------------------
+    - name: Pull rollback image from registry
       shell: docker pull {{ rollback_image }}
+      ignore_errors: yes
 
-    # Replace container
-    - name: Remove existing container
+    # ----------------------------
+    # Stop & remove current container
+    # ----------------------------
+    - name: Stop current container
+      shell: docker stop app
+      ignore_errors: yes
+
+    - name: Remove current container
       shell: docker rm -f app
+      ignore_errors: yes
 
-    - name: Run rollback container
+    # ----------------------------
+    # Run rollback container
+    # ----------------------------
+    - name: Start rollback container
       shell: docker run -d --name app -p 3000:3000 {{ rollback_image }}
 
-    - name: Rollback last DB migration
+    # ----------------------------
+    # Rollback last DB migration
+    # ----------------------------
+    - name: Undo last Flyway migration
       shell: mvn flyway:undo
       args:
-          chdir: "{{ project_dir }}"
+        chdir: "{{ project_dir }}"
       ignore_errors: yes
       register: flyway_undo_result
 

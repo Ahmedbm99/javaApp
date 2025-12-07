@@ -17,11 +17,22 @@
         mode: '0755'
 
     - name: Save current image before update
-      shell: docker inspect --format='{{'{{'}}.Config.Image{{'}}'}}' app > /app/target/docker_images_backup/prev_image
+      shell: docker save app -o /app/target/docker_images_backup/app_{{ ansible_date_time.iso8601 }}.tar
+      ignore_errors: yes
+    - name: Check if registry is reachable
+      shell: docker login {{ registry_url }} -u {{ registry_username }} -p {{ registry_password }}
+      register: login_result
       ignore_errors: yes
 
-    - name: Pull docker image
-      shell: docker pull "{{ image }}"
+    - name: Use local backup if registry is down
+      shell: |
+        if [ {{ login_result.rc }} -ne 0 ]; then
+          echo "Registry unreachable, loading backup image..."
+          docker load -i $(ls -t /app/target/docker_images_backup/*.tar | head -1)
+        else
+          docker pull "{{ image }}"
+        fi
+
 
     # Force stop if running
     - name: Force stop container if exists
