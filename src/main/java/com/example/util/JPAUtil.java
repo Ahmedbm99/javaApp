@@ -23,7 +23,6 @@ public class JPAUtil {
     public static void init(String persistenceUnitName, String flywayConfigPath) {
         runFlywayMigrations(flywayConfigPath);
         entityManagerFactory = Persistence.createEntityManagerFactory(persistenceUnitName);
-        logger.info("EntityManagerFactory initialisée pour " + persistenceUnitName);
     }
 
     /**
