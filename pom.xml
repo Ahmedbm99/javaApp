@@ -149,7 +149,11 @@
             <version>5.7.0</version>
             <scope>test</scope>
         </dependency>
-
+                <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
         <!-- Jersey Test Framework -->
         <dependency>
             <groupId>org.glassfish.jersey.test-framework</groupId>
@@ -179,7 +183,7 @@
             </plugin>
             <plugin>
                 <groupId>org.flywaydb</groupId>
-                <artifactId>flyway-maven-plugin</artifactId>
+                <artifactId>flyway-database-postgresql</artifactId>
                 <version>11.3.4</version>
                 <configuration>
                     <url>jdbc:postgresql://192.168.220.8:5432/appdb</url>
@@ -215,6 +219,9 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.example.RestServer</mainClass>
                                 </transformer>
+
+                                <!-- REQUIRED: include Flyway plugins -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                         </configuration>
                     </execution>

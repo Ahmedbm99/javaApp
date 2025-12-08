@@ -24,7 +24,11 @@ WORKDIR /app
 
 # Copy  JAR from build stage
 COPY --from=build /app/target/javaApp-repo-1.0.jar app.jar
+# Créer le dossier config
+RUN mkdir -p /app/config
 
+# Copier le fichier flyway.conf depuis Ansible
+COPY ansible/vars/flyway.conf /app/config/flyway.conf
 # Expose port (your app port)
 EXPOSE 3000
 

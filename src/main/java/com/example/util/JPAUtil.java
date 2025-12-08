@@ -30,42 +30,41 @@ public class JPAUtil {
      * Exécute les migrations Flyway à partir d'un fichier de configuration
      * Le fichier peut être chargé depuis le classpath (pour la production) ou depuis le système de fichiers (pour les tests)
      */
-    private static void runFlywayMigrations(String configFilePath) {
-        Properties props = new Properties();
-        
-        // Essayer d'abord de charger depuis le classpath (pour la production dans un JAR)
-        InputStream inputStream = JPAUtil.class.getClassLoader().getResourceAsStream(configFilePath);
-        
-        // Si pas trouvé dans le classpath, essayer comme fichier système (pour les tests)
-        if (inputStream == null) {
-            try {
-                inputStream = new FileInputStream(configFilePath);
-            } catch (Exception e) {
-                logger.severe("Impossible de charger le fichier de configuration Flyway: " + configFilePath);
-                throw new RuntimeException("Fichier de configuration Flyway introuvable: " + configFilePath, e);
-            }
-        }
-        
-        try (InputStream is = inputStream) {
-            props.load(is);
+private static void runFlywayMigrations(String configFilePath) {
+    Properties props = new Properties();
 
-            Flyway flyway = Flyway.configure()
-                    .dataSource(
-                            props.getProperty("flyway.url"),
-                            props.getProperty("flyway.user"),
-                            props.getProperty("flyway.password")
-                    )
-                    .locations(props.getProperty("flyway.locations"))
-                    .baselineOnMigrate(Boolean.parseBoolean(props.getProperty("flyway.baselineOnMigrate", "true")))
-                    .load();
+    try (InputStream inputStream = new FileInputStream(configFilePath)) {
 
-            flyway.migrate();
-            logger.info("Migrations Flyway exécutées avec succès sur " + props.getProperty("flyway.url"));
-        } catch (Exception e) {
-            logger.severe("Échec des migrations Flyway: " + e.getMessage());
-            throw new RuntimeException("Échec des migrations Flyway", e);
-        }
+        logger.info("Chargement du fichier Flyway: " + configFilePath);
+
+        props.load(inputStream);
+
+        logger.info("Flyway DB URL: " + props.getProperty("flyway.url"));
+        logger.info("Flyway DB User: " + props.getProperty("flyway.user"));
+        logger.info("Flyway DB password: " + props.getProperty("flyway.password"));
+                logger.info("Flyway DB location: " + props.getProperty("flyway.locations"));
+
+        Flyway flyway = Flyway.configure()
+                .dataSource(
+                        props.getProperty("flyway.url"),
+                        props.getProperty("flyway.user"),
+                        props.getProperty("flyway.password")
+                )
+                .locations(props.getProperty("flyway.locations"))
+                .baselineOnMigrate(Boolean.parseBoolean(props.getProperty("flyway.baselineOnMigrate", "true")))
+                .load();
+
+        flyway.migrate();
+        logger.info("Migrations Flyway exécutées avec succès.");
+
+    } catch (Exception e) {
+        logger.severe("Échec des migrations Flyway: " + e.getMessage());
+        throw new RuntimeException("Échec des migrations Flyway", e);
     }
+}
+
+
+
 
     public static EntityManagerFactory getEntityManagerFactory() {
         if (entityManagerFactory == null || !entityManagerFactory.isOpen()) {
