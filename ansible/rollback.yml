@@ -1,5 +1,4 @@
-    - name: Rollback deployment
-      hosts: app_servers
+    - hosts: app_servers
       become: yes
       vars:
         backup_dir: /home/server/docker-backups
