@@ -1,9 +1,10 @@
-    - hosts: app_servers
-      become: yes
-      vars:
-        backup_dir: /home/server/docker-backups
-      tasks:
-    
+- hosts: app_servers
+  become: yes
+  vars:
+    backup_dir: /home/server/docker-backups
+
+  tasks:
+
     # ----------------------------
     # Find last backup file
     # ----------------------------
@@ -29,7 +30,7 @@
         msg: "{{ loaded_image.stdout }}"
 
     # ----------------------------
-    # Extract image name from load output
+    # Extract image name
     # ----------------------------
     - name: Extract image full name
       set_fact:
@@ -40,7 +41,7 @@
         var: backup_image
 
     # ----------------------------
-    # Stop & remove current container
+    # Stop & remove container
     # ----------------------------
     - name: Stop current container
       shell: docker stop app
@@ -51,7 +52,7 @@
       ignore_errors: yes
 
     # ----------------------------
-    # Run container from backup image
+    # Run container from backup
     # ----------------------------
     - name: Start container using backup image
       shell: docker run -d --name app -p 3000:3000 {{ backup_image }}
