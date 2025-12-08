@@ -17,13 +17,12 @@ pipeline {
     }
 
     options {
-        timeout(time: 2, unit: 'HOURS') // Safety timeout
-        timestamps()                    // Log timestamps
+        timeout(time: 2, unit: 'HOURS')
+        timestamps()
     }
 
     stages {
 
-        // ------------------
         stage('Clone') {
             steps {
                 retry(3) {
@@ -32,7 +31,6 @@ pipeline {
             }
         }
 
-        // ------------------
         stage('Database Migration (Flyway)') {
             steps {
                 retry(2) {
@@ -42,14 +40,12 @@ pipeline {
             }
         }
 
-        // ------------------
         stage('Build & Unit Tests') {
             steps {
                 script {
                     try {
                         sh 'mvn clean test'
                     } finally {
-                        // Archive test results even if tests fail
                         junit 'target/surefire-reports/*.xml'
                         archiveArtifacts artifacts: '**/*.jar', allowEmptyArchive: true
                     }
@@ -58,7 +54,6 @@ pipeline {
             }
         }
 
-        // ------------------
         stage('Sonar Code Analysis') {
             environment { scannerHome = tool 'Sonar6.2' }
             steps {
@@ -87,7 +82,6 @@ pipeline {
             }
         }
 
-        // ------------------
         stage('Docker Build & Push') {
             steps {
                 script {
@@ -102,13 +96,8 @@ pipeline {
                     ]) {
                         retry(3) {
                             sh """
-                                echo "Logging in to Nexus registry..."
                                 docker login 192.168.220.8:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
-
-                                echo "Building Nexus image..."
                                 docker build -t ${REGISTRY}:${commitId} -f ./Dockerfile .
-
-                                echo "Pushing Nexus image..."
                                 docker push ${REGISTRY}:${commitId}
                             """
                         }
@@ -117,10 +106,27 @@ pipeline {
             }
         }
 
-        // ------------------
         stage('Deploy to VM3') {
             steps {
                 script {
+                    def targetIP = "192.168.220.9"
+                    def reachable = sh(script: "ping -c 1 ${targetIP} >/dev/null 2>&1", returnStatus: true)
+
+                    if (reachable != 0) {
+                        echo "VM3 unreachable. Creating new VM via Vagrant..."
+                        sh """
+                            cd vagrant/
+                            vagrant up
+                        """
+                        // récupérer la nouvelle IP
+                        targetIP = sh(
+                            script: "cd vagrant && vagrant ssh -c \"hostname -I | awk '{print \\$2}'\" | tr -d '\\n'",
+                            returnStdout: true
+                        )
+                        echo "New VM IP: ${targetIP}"
+                        sh "sed -i 's/192.168.220.9/${targetIP}/g' ansible/inventory.ini"
+                    }
+
                     def commitId = env.GIT_COMMIT ?: "build-${env.BUILD_NUMBER}"
                     def fullImage = "${env.REGISTRY}:${commitId}"
 
@@ -138,44 +144,69 @@ pipeline {
                     ]) {
                         retry(3) {
                             sh """
-                                echo "Running Ansible deployment..."
                                 ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
-                                    --extra-vars "image=${fullImage} registry_username=${REGISTRY_USERNAME} registry_password=${REGISTRY_PASSWORD} ansible_ssh_user=${SSH_USER} ansible_ssh_private_key_file=${SSH_KEY}"
+                                --extra-vars "image=${fullImage} registry_username=${REGISTRY_USERNAME} registry_password=${REGISTRY_PASSWORD} ansible_ssh_user=${SSH_USER} ansible_ssh_private_key_file=${SSH_KEY}"
                             """
                         }
+                    }
+
+                    // Health check sur la nouvelle IP
+                    def retries = 5
+                    def status = 1
+                    for (int i = 0; i < retries; i++) {
+                        status = sh(
+                            script: """
+                                RESPONSE=\$(curl -s --max-time 5 http://${targetIP}:3000/actuator/health)
+                                STATUS=\$(echo "\$RESPONSE" | sed -n 's/.*"status": *"\\\\([^"]*\\\\)".*/\\\\1/p')
+                                if [ "\$STATUS" = "UP" ]; then
+                                    echo "Service is UP"
+                                    exit 0
+                                else
+                                    echo "Service is DOWN"
+                                    exit 1
+                                fi
+                            """,
+                            returnStatus: true
+                        )
+
+                        if (status == 0) {
+                            echo "Application is healthy at ${targetIP}!"
+                            break
+                        } else {
+                            echo "Health check failed. Retrying in 5s..."
+                            sleep 5
+                        }
+                    }
+
+                    if (status != 0) {
+                        error("Application failed health check on ${targetIP}. Triggering rollback...")
                     }
                 }
             }
         }
-        stage('Health Check') {
-          steps {
-              script {
-                  def retries = 5
-                  def status = 1
-                  for (int i = 0; i < retries; i++) {
-                      status = sh(script: 'bash ansible/healthcheck.sh', returnStatus: true)
-                      if (status == 0) {
-                          echo "Application is healthy!"
-                          break
-                      } else {
-                          echo "Health check failed. Retrying in 5s..."
-                          sleep 5
-                      }
-                  }
-                  if (status != 0) {
-                      error("Application failed health check. Triggering rollback...")
-                  }
-              }
-          }
-        }
     }
-     
 
     post {
- 
         failure {
             echo "Pipeline failed! Triggering rollback..."
             script {
+                def targetIP = "192.168.220.9"
+                def reachable = sh(script: "ping -c 1 ${targetIP} >/dev/null 2>&1", returnStatus: true)
+
+                if (reachable != 0) {
+                    echo "VM3 unreachable. Creating new VM via Vagrant..."
+                    sh """
+                        cd vagrant/
+                        vagrant up
+                    """
+                    targetIP = sh(
+                        script: "cd vagrant && vagrant ssh -c \"hostname -I | awk '{print \\$2}'\" | tr -d '\\n'",
+                        returnStdout: true
+                    )
+                    echo "New VM IP: ${targetIP}"
+                    sh "sed -i 's/192.168.220.9/${targetIP}/g' ansible/inventory.ini"
+                }
+
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'docker-registry-cred', 
@@ -189,9 +220,8 @@ pipeline {
                     )
                 ]) {
                     sh """
-                        echo "Running rollback..."
                         ansible-playbook -i ansible/inventory.ini ansible/rollback.yml \
-                            --extra-vars "registry_username=${DOCKER_USER} registry_password=${DOCKER_PASSWORD} ansible_ssh_user=${SSH_USER} ansible_ssh_private_key_file=${SSH_KEY}"
+                        --extra-vars "registry_username=${DOCKER_USER} registry_password=${DOCKER_PASSWORD} ansible_ssh_user=${SSH_USER} ansible_ssh_private_key_file=${SSH_KEY}"
                     """
                 }
             }

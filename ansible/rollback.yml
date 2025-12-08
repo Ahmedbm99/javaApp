@@ -5,9 +5,6 @@
 
   tasks:
 
-    # ----------------------------
-    # Find last backup file
-    # ----------------------------
     - name: Get last backup file
       shell: ls -t {{ backup_dir }}/*.tar | head -1
       register: last_backup
@@ -17,9 +14,7 @@
       debug:
         msg: "Last backup file: {{ last_backup.stdout }}"
 
-    # ----------------------------
-    # Load backup image
-    # ----------------------------
+
     - name: Load backup image
       shell: docker load -i {{ last_backup.stdout }}
       register: loaded_image
@@ -28,9 +23,7 @@
       debug:
         msg: "{{ loaded_image.stdout }}"
 
-    # ----------------------------
-    # Extract image name
-    # ----------------------------
+
     - name: Extract image full name
       set_fact:
         backup_image: "{{ loaded_image.stdout | regex_search('Loaded image: (.*)', '\\1') | string }}"
@@ -39,9 +32,6 @@
       debug:
         var: backup_image
 
-    # ----------------------------
-    # Stop & remove container
-    # ----------------------------
     - name: Stop current container
       shell: docker stop app
       ignore_errors: yes
@@ -50,8 +40,5 @@
       shell: docker rm -f app
       ignore_errors: yes
 
-    # ----------------------------
-    # Run container from backup
-    # ----------------------------
     - name: Start container using backup image
       shell: docker run -d --name app -p 3000:3000 {{ backup_image }}
