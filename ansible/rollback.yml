@@ -26,7 +26,14 @@
 
     - name: Extract image full name
       set_fact:
-        backup_image: "{{ loaded_image.stdout | regex_search('Loaded image: (.*)', '\\1') | string }}"
+        backup_image: >-
+          {{ loaded_image.stdout_lines
+            | select('search', '^Loaded image:')
+            | list
+            | last
+            | regex_replace('Loaded image: ', '')
+            | trim }}
+
 
     - name: Show extracted image name
       debug:
