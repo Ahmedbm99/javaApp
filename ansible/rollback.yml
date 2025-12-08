@@ -12,8 +12,7 @@
       shell: ls -t {{ backup_dir }}/*.tar | head -1
       register: last_backup
       failed_when: last_backup.stdout == ""
-      ignore_errors: no
-
+    
     - name: Show last backup file
       debug:
         msg: "Last backup file: {{ last_backup.stdout }}"
@@ -34,7 +33,7 @@
     # ----------------------------
     - name: Extract image full name
       set_fact:
-        backup_image: "{{ loaded_image.stdout | regex_search('Loaded image: (.*)', '\\1') }}"
+        backup_image: "{{ loaded_image.stdout | regex_search('Loaded image: (.*)', '\\1') | string }}"
 
     - name: Show extracted image name
       debug:
